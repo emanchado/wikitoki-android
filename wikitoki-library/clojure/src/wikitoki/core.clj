@@ -11,7 +11,8 @@
            :constructors {[android.content.Context] []}
            :methods [[readLocalPage [String] String]
                      [writeLocalPage [String String] void]
-                     [renderLocalPage [String] String]])
+                     [renderLocalPage [String] String]
+                     [doesLocalPageExist [String] Boolean]])
 
 (defn -init [^android.content.Context ctx]
   [[] (atom {:ctx ctx})])
@@ -30,6 +31,9 @@
   (let [output-file (.openFileOutput (ctx this) pageName android.content.Context/MODE_PRIVATE)]
     (.write output-file (.getBytes contents))
     (.close output-file)))
+
+(defn -doesLocalPageExist [this ^String pageName]
+  (some #(= pageName %) (.fileList (ctx this))))
 
 (defn linkify-wiki-names [line state]
   [(s/replace line #"(WikiIndex)" "[$1](wikitoki://$1)") state])
