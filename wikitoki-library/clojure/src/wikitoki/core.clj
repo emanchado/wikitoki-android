@@ -24,7 +24,6 @@
         buffer-size (* 2 1024 1024)
         buffer (byte-array buffer-size)
         bytes-read (.read input-file buffer 0 buffer-size)]
-    ;; Ignore return value (number of bytes read) for now
     (String. buffer 0 bytes-read "UTF-8")))
 
 (defn -writeLocalPage [this ^String pageName ^String contents]
