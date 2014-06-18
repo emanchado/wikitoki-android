@@ -38,15 +38,20 @@ public class MainActivity extends Activity {
         webViewMainClient = new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-
+                Uri uri = Uri.parse(url);
 
                 if (isWikitokiInternalUrl(url)) {
-                    view.loadDataWithBaseURL(null, wikiToki.renderLocalPage(url), DEFAULT_MIME, DEFAULT_ENCODING, null);
+                    String pageName = uri.getHost();
+                    if (wikiToki.doesLocalPageExist(pageName)) {
+                        view.loadDataWithBaseURL(null, wikiToki.renderLocalPage(pageName), DEFAULT_MIME, DEFAULT_ENCODING, null);
+                    } else {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("http://google.com")));
+                    }
                     return true;
                 }
 
                 if (SHOW_URL_IN_EXTERNAL_BROWSER) {
-                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
                     return true;
                 }
 
@@ -96,7 +101,7 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if(webViewMain.canGoBack() == true){
+        if(webViewMain.canGoBack()){
             webViewMain.goBack();
         }else{
             super.onBackPressed();
