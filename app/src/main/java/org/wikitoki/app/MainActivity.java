@@ -105,6 +105,6 @@ public class MainActivity extends Activity {
 
     private String getRandomSuperduper() {
         final String[] superduper = {"yeah", "superduper", "ultrasuper", "kjempekult", "put-your-adjective-here"};
-        return superduper[(int )Math.random() * 5];
+        return superduper[(int) (Math.random() * 5)];
     }
 }
