@@ -12,7 +12,7 @@
            :methods [[readLocalPage [String] String]
                      [writeLocalPage [String String] void]
                      [renderLocalPage [String] String]
-                     [doesLocalPageExist [String] Boolean]])
+                     [doesLocalPageExist [String] boolean]])
 
 (defn -init [^android.content.Context ctx]
   [[] (atom {:ctx ctx})])
@@ -33,7 +33,7 @@
     (.close output-file)))
 
 (defn -doesLocalPageExist [this ^String pageName]
-  (some #(= pageName %) (.fileList (ctx this))))
+  (boolean (some #(= pageName %) (.fileList (ctx this)))))
 
 (defn linkify-wiki-names [line state]
   [(s/replace line #"(WikiIndex)" "[$1](wikitoki://$1)") state])
