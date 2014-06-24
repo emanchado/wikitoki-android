@@ -24,6 +24,7 @@ public class MainActivity extends Activity {
     private static final String DEFAULT_PAGE_NAME = "WikiToki";
     private static final String DEFAULT_PAGE_HTML = "<h1>Superduper</h1><p>Min %XX% wiki-side!!</p><a href=\"http://en.wikipedia.org/\">External link</a>\n" +
             "<a href=\"wikitoki://SomeOtherPage\">SomeOtherPage</a>";
+    private static final String OTHER_PAGE_HTML = "<p>En annen %XX% wiki-side!! Back to <a href=\"wikitoki://" + DEFAULT_PAGE_NAME + "\">" + DEFAULT_PAGE_NAME + "</a></p>\n";
 
     private static final String DEFAULT_MIME = "text/html";
     private static final String DEFAULT_ENCODING = "utf-8";
@@ -64,6 +65,7 @@ public class MainActivity extends Activity {
 
         wikiToki = new WikiToki(this);
         wikiToki.writeLocalPage(DEFAULT_PAGE_NAME, DEFAULT_PAGE_HTML.replace("%XX%", getRandomSuperduper()));
+        wikiToki.writeLocalPage("SomeOtherPage", OTHER_PAGE_HTML.replace("%XX%", getRandomSuperduper()));
     }
 
     private boolean isWikitokiInternalUrl(String url) {
