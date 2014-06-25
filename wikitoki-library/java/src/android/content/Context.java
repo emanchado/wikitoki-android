@@ -23,4 +23,8 @@ public class Context {
         File folder = new File("store");
         return folder.list();
     }
+
+    public final File getDir(String name, int mode) {
+        return new File(name);
+    }
 }

@@ -7,6 +7,7 @@
             [markdown.core :as md]
             [markdown.transformers :as mt]))
 
+
 (gen-class :name wikitoki.WikiToki
            :init init
            :state state
@@ -16,6 +17,9 @@
                      [writeLocalPage [String String] void]
                      [renderLocalPage [String] String]
                      [doesLocalPageExist [String] boolean]])
+
+;; This is just for usage from Clojure (testing)
+(defrecord WikiTokiRecord [state])
 
 (defn -init [^android.content.Context ctx]
   [[] (atom {:ctx ctx})])
@@ -44,9 +48,12 @@
     (boolean (some #(= pageName %) file-list))))
 
 (defn linkify-wiki-names [line state]
-  [(s/replace line #"(WikiIndex)" "[$1](wikitoki://$1)") state])
+  [(s/replace line
+              #"(!)?\b[A-Z][a-z0-9]+([A-Z][a-z0-9]*)+\b"
+              "[$1](wikitoki://$1)")
+   state])
 
 (defn -renderLocalPage [this ^String pageName]
-  (let [page-contents (.readLocalPage this pageName)]
+  (let [page-contents (-readLocalPage this pageName)]
     (md/md-to-html-string page-contents
                           :replacement-transformers (cons linkify-wiki-names mt/transformer-vector))))

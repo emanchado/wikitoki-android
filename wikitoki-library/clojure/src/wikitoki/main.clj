@@ -1,6 +1,6 @@
 (ns wikitoki.main
   (:import android.content.Context
-           wikitoki.core.WikiToki))
+           wikitoki.WikiToki))
 
 (defn -main [& args]
   (let [wikiToki (WikiToki. (Context.))]
