@@ -28,19 +28,25 @@
   (fact "Can create a simple page and read it back"
         (let [wiki-text "This is a simple WikiPage without much *formatting*."]
           (-writeLocalPage wiki-toki "WikiIndex" wiki-text)
-          (-readLocalPage wiki-toki "WikiIndex") => wiki-text))
+          (-readLocalPage wiki-toki "WikiIndex")
+          => wiki-text))
+
+  (fact "Created pages start to exist"
+        (-writeLocalPage wiki-toki "WikiIndex" "Whatever")
+        (-doesLocalPageExist wiki-toki "WikiIndex")
+        => true)
 
   (fact "Basic rendering works"
         (let [wiki-text "Some WikiLink first, then **bold**"]
           (-writeLocalPage wiki-toki "WikiIndex" wiki-text)
-          (-renderLocalPage wiki-toki "WikiIndex") =>
-          (fn [rendered-page-text]
-            (and (re-find #"<p>" rendered-page-text)
-                 (re-find #"wikitoki://" rendered-page-text)))))
+          (-renderLocalPage wiki-toki "WikiIndex")
+          => (fn [rendered-page-text]
+               (and (re-find #"<p>" rendered-page-text)
+                    (re-find #"wikitoki://" rendered-page-text)))))
 
   (fact "Non-WikiLinks are NOT converted to wiki links"
         (let [wiki-text "Some notWikiLink to test"]
           (-writeLocalPage wiki-toki "WikiIndex" wiki-text)
-          (-renderLocalPage wiki-toki "WikiIndex") =>
-          (fn [rendered-page-text]
-            (not (re-find #"wikitoki://" rendered-page-text))))))
+          (-renderLocalPage wiki-toki "WikiIndex")
+          => (fn [rendered-page-text]
+               (not (re-find #"wikitoki://" rendered-page-text))))))
