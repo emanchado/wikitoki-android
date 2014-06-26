@@ -7,7 +7,6 @@
             [markdown.core :as md]
             [markdown.transformers :as mt]))
 
-
 (gen-class :name wikitoki.WikiToki
            :init init
            :state state
