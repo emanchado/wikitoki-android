@@ -9,7 +9,7 @@ import android.view.MenuItem;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-import wikitoki.core.WikiToki;
+import wikitoki.WikiToki;
 
 
 
