@@ -3,9 +3,13 @@
            java.io.File
            java.io.FileInputStream
            java.io.FileOutputStream)
-  (:require [clojure.string :as s]
+  (:require [clj-http.client :as http]
+            [clojure.data.json :as json]
+            [clojure.string :as s]
             [markdown.core :as md]
-            [markdown.transformers :as mt]))
+            [markdown.transformers :as mt]
+            [wikitoki.textmerger :refer [three-way-merge]]
+            [clojure.java.io :refer [make-parents file delete-file]]))
 
 (gen-class :name wikitoki.WikiToki
            :init init
@@ -15,36 +19,41 @@
            :methods [[readLocalPage [String] String]
                      [writeLocalPage [String String] void]
                      [renderLocalPage [String] String]
-                     [doesLocalPageExist [String] boolean]])
+                     [doesLocalPageExist [String] boolean]
+                     [listLocalPages [] "[Ljava.lang.String;"]
+                     [fetchRemotePages [] void]
+                     [wipe [] void]])
 
 ;; This is just for usage from Clojure (testing)
 (defrecord WikiTokiRecord [state])
 
-(defn -init [^android.content.Context ctx]
-  [[] (atom {:ctx ctx})])
+(defn -init [^android.content.Context ctx ^String wiki-url]
+  [[] (atom {:ctx ctx, :wiki-url wiki-url})])
 
 (defn ctx [this]
   (@(.state this) :ctx))
 
-(defn -readLocalPage [this ^String pageName]
-  (let [input-dir (.getDir (ctx this) "pages" 0)
-        input-file (File. input-dir pageName)
-        input-stream (FileInputStream. input-file)
-        buffer-size (* 2 1024 1024)
-        buffer (byte-array buffer-size)
-        bytes-read (.read input-stream buffer 0 buffer-size)]
-    (String. buffer 0 bytes-read "UTF-8")))
+(defn wiki-url [this]
+  (@(.state this) :wiki-url))
 
-(defn -writeLocalPage [this ^String pageName ^String contents]
+(defn -readLocalPage [this ^String name]
+  (let [input-dir (.getDir (ctx this) "pages" 0)
+        input-file (File. input-dir name)
+        buffer-size (* 2 1024 1024)
+        buffer (byte-array buffer-size)]
+    (try
+      (let [ input-stream (FileInputStream. input-file)
+            bytes-read (.read input-stream buffer 0 buffer-size)]
+        (String. buffer 0 bytes-read "UTF-8"))
+      (catch java.io.FileNotFoundException e
+        nil))))
+
+(defn -writeLocalPage [this ^String name ^String contents]
   (let [output-dir (.getDir (ctx this) "pages" 0)
-        output-file (File. output-dir pageName)
+        output-file (File. output-dir name)
         output-stream (FileOutputStream. output-file)]
     (.write output-stream (.getBytes contents))
     (.close output-stream)))
-
-(defn -doesLocalPageExist [this ^String pageName]
-  (let [file-list (.list (.getDir (ctx this) "pages" 0))]
-    (boolean (some #(= pageName %) file-list))))
 
 (defn linkify-wiki-names [line state]
   [(s/replace line
@@ -52,7 +61,58 @@
               "[$1](wikitoki://$1)")
    state])
 
-(defn -renderLocalPage [this ^String pageName]
-  (let [page-contents (-readLocalPage this pageName)]
+(defn -renderLocalPage [this ^String name]
+  (let [page-contents (-readLocalPage this name)]
     (md/md-to-html-string page-contents
                           :replacement-transformers (cons linkify-wiki-names mt/transformer-vector))))
+
+(defn -listLocalPages [this]
+  (into-array String (.list (.getDir (ctx this) "pages" 0))))
+
+(defn -doesLocalPageExist [this ^String name]
+  (boolean (some #(= name %) (-listLocalPages this))))
+
+(defn readPageFromServer [this ^String name]
+  (let [input-dir (.getDir (ctx this) "orig-pages" 0)
+        input-file (File. input-dir name)
+        buffer-size (* 2 1024 1024)
+        buffer (byte-array buffer-size)]
+    (try
+      (let [input-stream (FileInputStream. input-file)
+            bytes-read (.read input-stream buffer 0 buffer-size)]
+        (String. buffer 0 bytes-read "UTF-8"))
+      (catch java.io.FileNotFoundException e
+        nil))))
+
+(defn writePageFromServer [this ^String name ^String contents]
+  (let [output-dir (.getDir (ctx this) "orig-pages" 0)
+        output-file (File. output-dir name)
+        output-stream (FileOutputStream. output-file)]
+    (.write output-stream (.getBytes contents))
+    (.close output-stream)))
+
+(defn -fetchRemotePages [this]
+  (let [response (http/get (str (wiki-url this) "/api/pages"))
+        response-body (:body response)
+        response-object (json/read-str response-body)
+        pages (get response-object "pages")]
+    (doseq [[page-name page-text] pages]
+      (let [old-server-page (readPageFromServer this page-name)
+            local-page (-readLocalPage this page-name)
+            final-text (three-way-merge (or page-text "")
+                                        (or old-server-page "")
+                                        (or local-page ""))]
+        (writePageFromServer this page-name final-text)
+        (-writeLocalPage this page-name final-text)))))
+
+(defn -wipe [this]
+  (letfn [(delete-recursively [fname]
+            (let [f (file fname)]
+              (if (.isDirectory f)
+                (doseq [child (.listFiles f)]
+                  (delete-recursively child)))
+              (delete-file f true)))]
+    (delete-recursively "pages")
+    (delete-recursively "orig-pages")
+    (.mkdirs (file "pages"))
+    (.mkdirs (file "orig-pages"))))

@@ -9,3 +9,6 @@ pom.xml.asc
 /.nrepl-port
 store/
 pages/
+orig-pages/
+node_modules/
+robohydra.log

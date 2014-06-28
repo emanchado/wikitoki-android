@@ -1,24 +1,23 @@
 (ns wikitoki.WikiToki-test
-  (:require [clojure.java.io :refer [make-parents file delete-file]]
+  (:require [clj-http.client :as http]
+            [clojure.string :as s]
             [midje.sweet :refer :all]
-            [wikitoki.WikiToki :refer :all]
-            [clojure.string :as s])
+            [wikitoki.WikiToki :refer :all])
   (:import android.content.Context))
 
-(def wiki-toki (map->WikiTokiRecord {:state (atom {:ctx (Context.)})}))
+(def ^:dynamic *robohydra-url* "http://localhost:3000")
 
-(defn delete-recursively [fname]
-  (let [f (file fname)]
-    (if (.isDirectory f)
-      (doseq [child (.listFiles f)]
-        (delete-recursively child)))
-    (delete-file f true)))
+(defmacro with-scenario [name & body]
+  `(do
+     (http/post (str *robohydra-url* "/robohydra-admin/rest/plugins/wikitoki-api/scenarios/" ~name) {:form-params {:active "true"}})
+     (let [result# (do ~@body)]
+       (http/post (str *robohydra-url* "/robohydra-admin/rest/plugins/wikitoki-api/scenarios/" ~name) {:form-params {:active "false"}})
+       result#)))
 
-(defn setup-dirs []
-  (delete-recursively "pages")
-  (.mkdirs (file "pages")))
+(def wiki-toki (map->WikiTokiRecord {:state (atom {:ctx (Context.)
+                                                   :wiki-url "http://localhost:3000"})}))
 
-(with-state-changes [(before :facts (setup-dirs))]
+(with-state-changes [(before :facts (-wipe wiki-toki))]
   (fact "Can create WikiToki objects"
         wiki-toki => (fn [r] r))
 
@@ -49,4 +48,30 @@
           (-writeLocalPage wiki-toki "WikiIndex" wiki-text)
           (-renderLocalPage wiki-toki "WikiIndex")
           => (fn [rendered-page-text]
-               (not (re-find #"wikitoki://" rendered-page-text))))))
+               (not (re-find #"wikitoki://" rendered-page-text)))))
+
+  (fact "Can get the list of local pages"
+        (-writeLocalPage wiki-toki "WikiIndex" "Some text")
+        (-writeLocalPage wiki-toki "AnotherPage" "More text")
+        (sort (-listLocalPages wiki-toki))
+        => ["AnotherPage" "WikiIndex"])
+
+  (fact "Can receive pages from the API"
+        (with-scenario "twoPages"
+          (-fetchRemotePages wiki-toki)
+          (sort (-listLocalPages wiki-toki)))
+        => ["RoboHydra" "WikiIndex"])
+
+  (fact "Takes local changes if the server hasn't changed"
+        (let [orig-page "This is the index from RoboHydra."
+              local-page (str orig-page "\nThis is a second line")]
+          (with-scenario "twoPages"
+            (writePageFromServer wiki-toki "WikiIndex" orig-page)
+            (-writeLocalPage wiki-toki "WikiIndex" local-page)
+            (-fetchRemotePages wiki-toki)
+            (-readLocalPage wiki-toki "WikiIndex"))
+          => local-page)))
+
+;; SENDS local changes back to the server
+;; Receiving pages from the API does not remove new local pages
+;; Test that a 304 doesn't delete the pages
