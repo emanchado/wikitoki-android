@@ -21,7 +21,7 @@
                      [renderLocalPage [String] String]
                      [doesLocalPageExist [String] boolean]
                      [listLocalPages [] "[Ljava.lang.String;"]
-                     [fetchRemotePages [] void]
+                     [synchronizePages [] void]
                      [wipe [] void]])
 
 ;; This is just for usage from Clojure (testing)
@@ -91,10 +91,14 @@
     (.write output-stream (.getBytes contents))
     (.close output-stream)))
 
-(defn -fetchRemotePages [this]
-  (let [response (http/get (str (wiki-url this) "/api/pages"))
-        response-body (:body response)
-        response-object (json/read-str response-body)
+(defn sendPageToServer [this ^String name]
+  (let [contents (readPageFromServer this name)]
+    (http/post (str (wiki-url this) "/api/pages/" name)
+               {:body (json/write-str {:name name
+                                       :contents contents})})))
+
+(defn processPageListResponse [this response-body]
+  (let [response-object (json/read-str response-body)
         pages (get response-object "pages")]
     (doseq [[page-name page-text] pages]
       (let [old-server-page (readPageFromServer this page-name)
@@ -103,7 +107,27 @@
                                         (or old-server-page "")
                                         (or local-page ""))]
         (writePageFromServer this page-name final-text)
-        (-writeLocalPage this page-name final-text)))))
+        (-writeLocalPage this page-name final-text)
+        (sendPageToServer this page-name)))
+    (let [server-page-set (set (map first pages))]
+      (doseq [new-page-name (filter #(not (contains? server-page-set %))
+                                    (-listLocalPages this))]
+        (let [new-page-contents (-readLocalPage this new-page-name)]
+          (writePageFromServer this new-page-name new-page-contents)
+          (sendPageToServer this new-page-name))))))
+
+(defn -synchronizePages [this]
+  (try
+    (let [response (http/get (str (wiki-url this) "/api/pages"))
+          status-code (:status response)]
+      (if (= status-code 200)
+        (processPageListResponse this (:body response))
+        (println (str "Ignoring server response with status " status-code))))
+    (catch Exception e
+      ;; This is a slingshot exception, hence the complicated way to
+      ;; access the status code
+      (when (not= (:status (:object (.data e))) 304)
+        (throw e)))))
 
 (defn -wipe [this]
   (letfn [(delete-recursively [fname]
