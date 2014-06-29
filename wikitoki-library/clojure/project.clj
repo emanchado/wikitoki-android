@@ -7,7 +7,7 @@
                  [markdown-clj "0.9.44"]
                  [local/fake-android-context "0.1.0"]
                  [midje "1.6.3"]
-                 [clj-http "0.9.2"]
+                 [http-kit "2.1.16"]
                  [org.clojure/data.json "0.2.5"]]
   :aot [wikitoki.WikiToki]
   :main wikitoki.main)

@@ -1,12 +1,12 @@
 (ns midje.robohydra
-  (:require [clj-http.client :as http]
+  (:require [org.httpkit.client :as http]
             [clojure.data.json :as json]))
 
 ;; WikiToki API mock server configuration
 (def ^:dynamic *robohydra-url* "http://localhost:3000")
 
 (defn- manipulate-scenario [plugin-name scenario-name new-props]
-  (http/post (str *robohydra-url* "/robohydra-admin/rest/plugins/" plugin-name "/scenarios/" scenario-name) {:form-params new-props}))
+  @(http/post (str *robohydra-url* "/robohydra-admin/rest/plugins/" plugin-name "/scenarios/" scenario-name) {:form-params new-props}))
 
 (defn activate-scenario [plugin-name scenario-name]
   (manipulate-scenario plugin-name scenario-name {:active "true"}))
@@ -22,7 +22,7 @@
        result#)))
 
 (defn fetch-scenario-result [plugin-name scenario-name]
-  (let [robohydra-response (http/get (str *robohydra-url* "/robohydra-admin/rest/test-results"))
+  (let [robohydra-response @(http/get (str *robohydra-url* "/robohydra-admin/rest/test-results"))
         all-test-results (json/read-str (:body robohydra-response))
         scenario-test-results (-> all-test-results
                                   (get plugin-name)

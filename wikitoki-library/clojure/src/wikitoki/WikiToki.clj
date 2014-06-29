@@ -3,7 +3,7 @@
            java.io.File
            java.io.FileInputStream
            java.io.FileOutputStream)
-  (:require [clj-http.client :as http]
+  (:require [org.httpkit.client :as http]
             [clojure.data.json :as json]
             [clojure.string :as s]
             [markdown.core :as md]
@@ -118,7 +118,7 @@
 
 (defn -synchronizePages [this]
   (try
-    (let [response (http/get (str (wiki-url this) "/api/pages"))
+    (let [response @(http/get (str (wiki-url this) "/api/pages"))
           status-code (:status response)]
       (if (= status-code 200)
         (processPageListResponse this (:body response))
