@@ -35,7 +35,7 @@
           (-renderLocalPage wiki-toki "WikiIndex")
           => (fn [rendered-page-text]
                (and (re-find #"<p>" rendered-page-text)
-                    (re-find #"wikitoki://" rendered-page-text)))))
+                    (re-find #"wikitoki://WikiLink" rendered-page-text)))))
 
   (fact "Non-WikiLinks are NOT converted to wiki links"
         (let [wiki-text "Some notWikiLink to test"]

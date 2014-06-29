@@ -57,8 +57,8 @@
 
 (defn linkify-wiki-names [line state]
   [(s/replace line
-              #"(!)?\b[A-Z][a-z0-9]+([A-Z][a-z0-9]*)+\b"
-              "[$1](wikitoki://$1)")
+              #"(!)?\b([A-Z][a-z0-9]+([A-Z][a-z0-9]*)+)\b"
+              "[$2](wikitoki://$2)")
    state])
 
 (defn -renderLocalPage [this ^String name]
