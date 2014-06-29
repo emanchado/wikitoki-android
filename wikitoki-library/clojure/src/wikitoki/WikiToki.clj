@@ -15,7 +15,7 @@
            :init init
            :state state
            :main false
-           :constructors {[android.content.Context] []}
+           :constructors {[android.content.Context String] []}
            :methods [[readLocalPage [String] String]
                      [writeLocalPage [String String] void]
                      [renderLocalPage [String] String]
