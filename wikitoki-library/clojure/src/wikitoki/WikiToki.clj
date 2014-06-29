@@ -3,7 +3,7 @@
            java.io.File
            java.io.FileInputStream
            java.io.FileOutputStream)
-  (:require [org.httpkit.client :as http]
+  (:require [trivial.requests :as http]
             [clojure.data.json :as json]
             [clojure.string :as s]
             [markdown.core :as md]
@@ -93,9 +93,9 @@
 
 (defn sendPageToServer [this ^String name]
   (let [contents (readPageFromServer this name)]
-    (http/post (str (wiki-url this) "/api/pages/" name)
-               {:body (json/write-str {:name name
-                                       :contents contents})})))
+    (http/post-request (str (wiki-url this) "/api/pages/" name)
+                       (json/write-str {:name name
+                                        :contents contents}))))
 
 (defn processPageListResponse [this response-body]
   (let [response-object (json/read-str response-body)
@@ -118,7 +118,7 @@
 
 (defn -synchronizePages [this]
   (try
-    (let [response @(http/get (str (wiki-url this) "/api/pages"))
+    (let [response (http/get-request (str (wiki-url this) "/api/pages"))
           status-code (:status response)]
       (if (= status-code 200)
         (processPageListResponse this (:body response))
@@ -126,7 +126,7 @@
     (catch Exception e
       ;; This is a slingshot exception, hence the complicated way to
       ;; access the status code
-      (when (not= (:status (:object (.data e))) 304)
+      (when (not= (:status e) 304)
         (throw e)))))
 
 (defn -wipe [this]
