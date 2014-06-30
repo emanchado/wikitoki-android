@@ -1,6 +1,7 @@
 (ns trivial.requests
   (:import java.io.OutputStreamWriter
-           java.net.HttpURLConnection
+           java.io.InputStreamReader
+           java.io.BufferedReader
            java.net.URL))
 
 (defn get-request [^String url-string]
@@ -8,15 +9,15 @@
         conn (.openConnection url)]
     (.setRequestMethod conn "GET")
     (let [is (.getInputStream conn)
-          buffer-size (* 2 1024 1024)
-          buffer (byte-array buffer-size)
-          bytes-read (loop [start 0]
-                       (let [max-bytes (- buffer-size start)
-                             nbytes (.read is buffer start max-bytes)]
-                         (if (pos? nbytes)
-                           (recur (+ nbytes start))
-                           start)))]
-      {:body (String. buffer 0 bytes-read "UTF-8")
+          buffered-reader (BufferedReader. (InputStreamReader. is))
+          body (loop [body ""]
+                 (let [line (.readLine buffered-reader)]
+                   (if (nil? line)
+                     (do
+                       (.close buffered-reader)
+                       body)
+                     (recur (str body "\n" line)))))]
+      {:body body
        :status (.getResponseCode conn)})))
 
 (defn post-request [^String url-string ^String body]
@@ -30,13 +31,13 @@
       (.flush osw)
       (.close osw))
     (let [is (.getInputStream conn)
-          buffer-size (* 2 1024 1024)
-          buffer (byte-array buffer-size)
-          bytes-read (loop [start 0]
-                       (let [max-bytes (- buffer-size start)
-                             nbytes (.read is buffer start max-bytes)]
-                         (if (pos? nbytes)
-                           (recur (+ nbytes start))
-                           start)))]
-      {:body (String. buffer 0 bytes-read "UTF-8")
+          buffered-reader (BufferedReader. (InputStreamReader. is))
+          body (loop [body ""]
+                 (let [line (.readLine buffered-reader)]
+                   (if (nil? line)
+                     (do
+                       (.close buffered-reader)
+                       body)
+                     (recur (str body "\n" line)))))]
+      {:body body
        :status (.getResponseCode conn)})))
